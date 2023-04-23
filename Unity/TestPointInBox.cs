@@ -10,11 +10,32 @@ public class Plane
 
 public class TestPointInBox : MonoBehaviour
 {
-    public Plane[] planes = new Plane[6];
-    public GameObject sphere = null;
-    public Material material = null;
+    private Plane[] planes = new Plane[6];
+    private GameObject sphere = null;
+    private Material material = null;
+
+    private Vector3 targetPos;
+    private Quaternion targetRot;
+    private Vector3 targetScale;
+    private bool away = true;
+    public float moveSpeed = 1.0f;
+    public float rotSpeed = 1.0f;
+    public float scaleSpeed = 1.0f;
     // Start is called before the first frame update
 
+    void genTarget()
+    {
+        if(away)
+        {
+            targetPos = new Vector3(Random.Range(0, 10), Random.Range(0, 10), Random.Range(0, 10));
+        }
+        else
+        {
+            targetPos = Vector3.zero;
+        }
+        targetRot = new Quaternion(Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1));
+        targetScale = new Vector3(Random.Range(1, 10), Random.Range(1, 10), Random.Range(1, 10));
+    }
     void Initialize()
     {
         material = GetComponent<MeshRenderer>().sharedMaterial;
@@ -30,7 +51,7 @@ public class TestPointInBox : MonoBehaviour
     {
         var pos = transform.position;
         var rot = transform.rotation;
-        var scale = transform.lossyScale;
+        var scale = transform.localScale;
 
         var posMat = Matrix4x4.Translate(pos);
         var rotMat = Matrix4x4.Rotate(rot);
@@ -65,6 +86,7 @@ public class TestPointInBox : MonoBehaviour
     {
         Initialize();
         ConstructPlane();
+        genTarget();
     }
 
     // Update is called once per frame
@@ -74,23 +96,33 @@ public class TestPointInBox : MonoBehaviour
         ConstructPlane();
 
         bool hit = true;
-        for(int i = 0; i < 6; i++) 
+        for(int i = 0; i < 6; i++)
         {
             var res = Vector3.Dot(pos - planes[i].center, planes[i].normal);
             if(res <= 0)
             {
-                hit = false; 
+                hit = false;
                 break;
             }
         }
 
-        if(hit) 
+        if(hit)
         {
             material.color = Color.red;
         }
         else
         {
             material.color = Color.white;
+        }
+
+        transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, rotSpeed * Time.deltaTime);
+        transform.localScale = Vector3.MoveTowards(transform.localScale, targetScale, scaleSpeed * Time.deltaTime);
+        Vector3 posDelta = transform.position - targetPos;
+        if(posDelta.sqrMagnitude < 0.1f)
+        {
+            away =!away;
+            genTarget();
         }
     }
 }

@@ -12,21 +12,29 @@ struct Plane
 	FVector normal;
 };
 
-
 UCLASS()
-class PROTOTYPE_UNREAL_API AFloatingActor : public AActor
+class PROTOTYPE_API AFloatingActor : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
 	AFloatingActor();
+
 	void ConstructPlane();
+	void GenTarget();
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* VisualMesh;
 
 	Plane planes[6];
+	FVector targetPos;
+	FRotator targetRot;
+	FVector targetScale;
+	bool away;
+	float moveSpeed;
+	float rotSpeed;
+	float scaleSpeed;
 
 protected:
 	// Called when the game starts or when spawned
@@ -37,4 +45,3 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 };
-

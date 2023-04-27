@@ -19,6 +19,25 @@ AFloatingActor::AFloatingActor()
 		VisualMesh->SetStaticMesh(CubeVisualAsset.Object);
 		VisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
+
+	away = true;
+	moveSpeed = 1.0f;
+	rotSpeed = 1.0f;
+	scaleSpeed = 1.0f;
+}
+
+void AFloatingActor::GenTarget()
+{
+	if (away)
+	{
+		targetPos = FVector(FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f));
+	}
+	else
+	{
+		targetPos = FVector::ZeroVector;
+	}
+	targetRot = FRotator(FMath::RandRange(-1.0f, 1.0f), FMath::RandRange(-1.0f, 1.0f), FMath::RandRange(-1.0f, 1.0f));
+	targetScale = FVector(FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f));
 }
 
 void AFloatingActor::ConstructPlane()
@@ -48,13 +67,20 @@ void AFloatingActor::ConstructPlane()
 	planes[3].normal = FVector(0, -1, 0);
 	planes[4].normal = FVector(0, 0, +1);
 	planes[5].normal = FVector(0, 0, -1);
+
+	for(int i = 0; i < 6; i++)
+	{
+		planes[i].center = mat.TransformPosition(planes[i].center);
+		planes[i].normal = (mat.TransformVector(planes[i].normal)).GetUnsafeNormal3();
+	}
 }
 
 // Called when the game starts or when spawned
 void AFloatingActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	ConstructPlane();
+	GenTarget();
 }
 
 // Called every frame

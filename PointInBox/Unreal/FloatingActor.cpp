@@ -40,6 +40,22 @@ void AFloatingActor::GenTarget()
 	targetScale = FVector(FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f));
 }
 
+void AFloatingActor::Initialize()
+{
+	TArray<AActor*> actorsToFind;
+	UGameplayStatics::GetAllActorsOfClassWithTag(GetWorld(), AStaticMeshActor::StaticClass(), FName("Sphere"), actorsToFind);
+
+	for (AActor* actor: actorsToFind)
+    {
+        pSphereActor = Cast<AStaticMeshActor>(actor);
+
+        if (pSphereActor)
+        {
+			break;
+        }   
+    }
+}
+
 void AFloatingActor::ConstructPlane()
 {
 	FVector pos = GetActorLocation();
@@ -79,6 +95,7 @@ void AFloatingActor::ConstructPlane()
 void AFloatingActor::BeginPlay()
 {
 	Super::BeginPlay();
+	Initialize();
 	ConstructPlane();
 	GenTarget();
 }
@@ -96,5 +113,19 @@ void AFloatingActor::Tick(float DeltaTime)
 	float DeltaRotation = DeltaTime * 20.0f;    //Rotate by 20 degrees per second
 	NewRotation.Yaw += DeltaRotation;
 	SetActorLocationAndRotation(NewLocation, NewRotation);
+
+	FVector pos = pSphereActor->GetActorLocation();
+	ConstructPlane();
+
+	bool hit = true;
+	for(int i = 0; i < 6; i++)
+	{
+		auto res = FVector::DotProduct(pos - planes[i].center, planes[i].normal);
+		if(res <= 0)
+		{
+			hit = false;
+			break;
+		}
+	}
 }
 

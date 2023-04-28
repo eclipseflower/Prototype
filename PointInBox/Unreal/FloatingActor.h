@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/StaticMeshActor.h"
 #include "FloatingActor.generated.h"
 
 struct Plane
@@ -21,11 +23,14 @@ public:
 	// Sets default values for this actor's properties
 	AFloatingActor();
 
+	void Initialize();
 	void ConstructPlane();
 	void GenTarget();
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* VisualMesh;
+
+	AStaticMeshActor* pSphereActor;
 
 	Plane planes[6];
 	FVector targetPos;

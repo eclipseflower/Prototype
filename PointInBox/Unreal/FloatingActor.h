@@ -30,6 +30,9 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* VisualMesh;
 
+	UPROPERTY(VisibleAnywhere)
+	UMaterialInstanceDynamic* DynamicMaterialInst;
+
 	AStaticMeshActor* pSphereActor;
 
 	Plane planes[6];

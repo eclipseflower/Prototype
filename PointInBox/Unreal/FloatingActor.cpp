@@ -20,6 +20,14 @@ AFloatingActor::AFloatingActor()
 		VisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
 
+	static ConstructorHelpers::FObjectFinder<UMaterial> CubeMaterialAsset(TEXT("/Engine/EngineMaterials/WorldGridMaterial"));
+
+	if (CubeMaterialAsset.Succeeded())
+	{
+		DynamicMaterialInst = UMaterialInstanceDynamic::Create(CubeMaterialAsset.Object, VisualMesh);
+		VisualMesh->SetMaterial(0, DynamicMaterialInst);
+	}
+
 	away = true;
 	moveSpeed = 1.0f;
 	rotSpeed = 1.0f;
@@ -54,6 +62,7 @@ void AFloatingActor::Initialize()
 			break;
         }   
     }
+
 }
 
 void AFloatingActor::ConstructPlane()
@@ -105,15 +114,6 @@ void AFloatingActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FVector NewLocation = GetActorLocation();
-	FRotator NewRotation = GetActorRotation();
-	float RunningTime = GetGameTimeSinceCreation();
-	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
-	NewLocation.Z += DeltaHeight * 20.0f;       //Scale our height by a factor of 20
-	float DeltaRotation = DeltaTime * 20.0f;    //Rotate by 20 degrees per second
-	NewRotation.Yaw += DeltaRotation;
-	SetActorLocationAndRotation(NewLocation, NewRotation);
-
 	FVector pos = pSphereActor->GetActorLocation();
 	ConstructPlane();
 
@@ -127,5 +127,25 @@ void AFloatingActor::Tick(float DeltaTime)
 			break;
 		}
 	}
+
+	if (DynamicMaterialInst)
+	{
+		if (hit)
+		{
+			DynamicMaterialInst->SetVectorParameterValue(TEXT("base color"), FVector4(1, 0, 0, 0));
+		}
+		else
+		{
+			DynamicMaterialInst->SetVectorParameterValue(TEXT("base color"), FVector4(1, 1, 1, 0));
+		}
+	}
+
+	FVector NewLocation = GetActorLocation();
+	FRotator NewRotation = GetActorRotation();
+	float RunningTime = GetGameTimeSinceCreation();
+	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
+	float DeltaRotation = DeltaTime * 20.0f;    //Rotate by 20 degrees per second
+	NewRotation.Yaw += DeltaRotation;
+	//SetActorLocationAndRotation(NewLocation, NewRotation);
 }
 

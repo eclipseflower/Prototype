@@ -20,7 +20,7 @@ AFloatingActor::AFloatingActor()
 		VisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
 
-	static ConstructorHelpers::FObjectFinder<UMaterial> CubeMaterialAsset(TEXT("/Engine/EngineMaterials/WorldGridMaterial"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> CubeMaterialAsset(TEXT("/Game/StarterContent/Materials/M_Basic_Floor"));
 
 	if (CubeMaterialAsset.Succeeded())
 	{
@@ -38,14 +38,14 @@ void AFloatingActor::GenTarget()
 {
 	if (away)
 	{
-		targetPos = FVector(FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f));
+		targetPos = FVector(FMath::RandRange(0.0f, 1000.0f), FMath::RandRange(0.0f, 1000.0f), FMath::RandRange(0.0f, 1000.0f));
 	}
 	else
 	{
 		targetPos = FVector::ZeroVector;
 	}
-	targetRot = FRotator(FMath::RandRange(-1.0f, 1.0f), FMath::RandRange(-1.0f, 1.0f), FMath::RandRange(-1.0f, 1.0f));
-	targetScale = FVector(FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f), FMath::RandRange(0.0f, 10.0f));
+	targetRot = FRotator(FMath::RandRange(-180.0f, 180.0f), FMath::RandRange(-180.0f, 180.0f), FMath::RandRange(-180.0f, 180.0f));
+	targetScale = FVector(FMath::RandRange(1.0f, 10.0f), FMath::RandRange(1.0f, 10.0f), FMath::RandRange(1.0f, 10.0f));
 }
 
 void AFloatingActor::Initialize()
@@ -53,6 +53,7 @@ void AFloatingActor::Initialize()
 	TArray<AActor*> actorsToFind;
 	UGameplayStatics::GetAllActorsOfClassWithTag(GetWorld(), AStaticMeshActor::StaticClass(), FName("Sphere"), actorsToFind);
 
+	pSphereActor = nullptr;
 	for (AActor* actor: actorsToFind)
     {
         pSphereActor = Cast<AStaticMeshActor>(actor);
@@ -63,6 +64,10 @@ void AFloatingActor::Initialize()
         }   
     }
 
+	if (!pSphereActor)
+	{
+		UE_LOG(LogTemp, Log, TEXT("ACTOR NULLPTR!!!!"));
+	}
 }
 
 void AFloatingActor::ConstructPlane()
@@ -75,9 +80,9 @@ void AFloatingActor::ConstructPlane()
 	FMatrix rotMat = FRotationMatrix(rot);
 	FMatrix mat = posMat * rotMat;
 
-	auto x = scale[0] * 0.5;
-	auto y = scale[1] * 0.5;
-	auto z = scale[2] * 0.5;
+	auto x = scale[0] * 0.5 * 100;
+	auto y = scale[1] * 0.5 * 100;
+	auto z = scale[2] * 0.5 * 100;
 
 	planes[0].center = FVector(-x, 0, 0);
 	planes[1].center = FVector(+x, 0, 0);
@@ -114,6 +119,11 @@ void AFloatingActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!pSphereActor)
+	{
+		return;
+	}
+
 	FVector pos = pSphereActor->GetActorLocation();
 	ConstructPlane();
 
@@ -132,20 +142,28 @@ void AFloatingActor::Tick(float DeltaTime)
 	{
 		if (hit)
 		{
-			DynamicMaterialInst->SetVectorParameterValue(TEXT("base color"), FVector4(1, 0, 0, 0));
+			DynamicMaterialInst->SetVectorParameterValue(TEXT("Color"), FVector4(1, 0, 0, 0));
 		}
 		else
 		{
-			DynamicMaterialInst->SetVectorParameterValue(TEXT("base color"), FVector4(1, 1, 1, 0));
+			DynamicMaterialInst->SetVectorParameterValue(TEXT("Color"), FVector4(1, 1, 1, 0));
 		}
 	}
 
 	FVector NewLocation = GetActorLocation();
 	FRotator NewRotation = GetActorRotation();
-	float RunningTime = GetGameTimeSinceCreation();
-	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
-	float DeltaRotation = DeltaTime * 20.0f;    //Rotate by 20 degrees per second
-	NewRotation.Yaw += DeltaRotation;
-	//SetActorLocationAndRotation(NewLocation, NewRotation);
-}
+	FVector NewScale = GetActorScale();
 
+	NewLocation = FMath::Lerp(NewLocation, targetPos, moveSpeed * DeltaTime);
+	NewRotation = FQuat::Slerp(NewRotation.Quaternion(), targetRot.Quaternion(), rotSpeed * DeltaTime).Rotator();
+	NewScale = FMath::Lerp(NewScale, targetScale, scaleSpeed * DeltaTime);
+	SetActorLocationAndRotation(NewLocation, NewRotation);
+	SetActorRelativeScale3D(NewScale);
+
+	FVector posDelta = NewLocation - targetPos;
+	if (posDelta.SquaredLength() < 10.0f)
+	{
+		away = !away;
+		GenTarget();
+	}
+}

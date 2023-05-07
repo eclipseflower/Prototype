@@ -15,7 +15,7 @@ struct Plane
 };
 
 UCLASS()
-class PROTOTYPE_API AFloatingActor : public AActor
+class PROTOTYPE_UNREAL_API AFloatingActor : public AActor
 {
 	GENERATED_BODY()
 	

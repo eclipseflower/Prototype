@@ -7,7 +7,7 @@
 #include "PointSameLineActor.generated.h"
 
 UCLASS()
-class PROTOTYPE_API APointSameLineActor : public AActor
+class PROTOTYPE_UNREAL_API APointSameLineActor : public AActor
 {
 	GENERATED_BODY()
 
@@ -15,11 +15,14 @@ public:
 	// Sets default values for this actor's properties
 	APointSameLineActor();
 
-	UPROPERTIES(EditAnywhere)
+	UPROPERTY(EditAnywhere)
 	APointSameLineActor* pActor1;
 
-	UPROPERTIES(EditAnywhere)
+	UPROPERTY(EditAnywhere)
 	APointSameLineActor* pActor2;
+
+	UPROPERTY(EditAnywhere)
+	bool isMain;
 
 	float speed1;
 	float speed2;
@@ -37,7 +40,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	void Generate();
-	void Rotate();
+	void Rotate(float DeltaTime);
 
 public:
 	// Called every frame

@@ -13,6 +13,22 @@ public class TestPointInTriangle : MonoBehaviour
     public Vector3 p2;
     public Vector3 p3;
     private Material material = null;
+    private Vector3 targetPos;
+    private bool away = true;
+    public float moveSpeed = 1.0f;
+
+    void genTarget()
+    {
+        if(away)
+        {
+            targetPos = new Vector3(Random.Range(-10, 10), Random.Range(-4, 5), 0);
+        }
+        else
+        {
+            targetPos = Vector3.zero;
+        }
+    }
+
     void Start()
     {
         p1 = g1.transform.position;
@@ -20,6 +36,7 @@ public class TestPointInTriangle : MonoBehaviour
         p3 = g3.transform.position;
 
         material = GetComponent<MeshRenderer>().sharedMaterial;
+        genTarget();
     }
 
     // Update is called once per frame
@@ -37,6 +54,14 @@ public class TestPointInTriangle : MonoBehaviour
         else
         {
             material.color = Color.white;
+        }
+
+        transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
+        Vector3 posDelta = transform.position - targetPos;
+        if(posDelta.sqrMagnitude < 0.1f)
+        {
+            away =!away;
+            genTarget();
         }
     }
 }

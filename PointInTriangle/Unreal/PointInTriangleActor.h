@@ -8,7 +8,7 @@
 #include "PointInTriangleActor.generated.h"
 
 UCLASS()
-class PROTOTYPE_UNREAL_API APointInTriangleActor : public AActor
+class PROTOTYPE_API APointInTriangleActor : public AActor
 {
 	GENERATED_BODY()
 	

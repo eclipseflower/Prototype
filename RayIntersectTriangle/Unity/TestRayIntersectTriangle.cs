@@ -10,6 +10,8 @@ public class TestRayIntersectTriangle : MonoBehaviour
     public GameObject g2;
     public GameObject g3;
 
+    public float rotationSpeed = 100f;
+
     private Material material;
     private Vector3 p1;
     private Vector3 p2;
@@ -57,6 +59,8 @@ public class TestRayIntersectTriangle : MonoBehaviour
         {
             material.color = Color.white;
         }
+
+        transform.Rotate(Vector3.up * Time.deltaTime * rotationSpeed);
     }
     GameObject GenTriangle()
     {

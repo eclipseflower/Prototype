@@ -32,7 +32,9 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	UMaterialInstanceDynamic* pDynamicMaterialInst;
 
-private:
+	UPROPERTY(VisibleAnywhere)
+	UProceduralMeshComponent* pProceduralMesh;
+
 	FVector p1;
 	FVector p2;
 	FVector p3;

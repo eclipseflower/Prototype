@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	AStaticMeshActor* pActor3;
 
+	UPROPERTY(EditAnywhere)
+	float rotationSpeed;
+
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* pVisualMesh;
 

@@ -37,7 +37,7 @@ void ARayIntersectTriangle::CreateMesh()
 	if (cubeVisualAsset.Succeeded())
 	{
 		pVisualMesh->SetStaticMesh(cubeVisualAsset.Object);
-		pVisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		//pVisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
 
 	static ConstructorHelpers::FObjectFinder<UMaterial> cubeMaterialAsset(TEXT("/Game/StarterContent/Materials/M_Basic_Floor"));
@@ -73,9 +73,35 @@ void ARayIntersectTriangle::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FVector lineStart = GetActorLocation();
-	FVector lineEnd = GetActorLocation() + GetActorForwardVector() * 1000.0f;
+	FVector lineForward = GetActorForwardVector();
+	FVector lineEnd = GetActorLocation() + lineForward * 1000.0f;
 	DrawDebugLine(GetWorld(), lineStart, lineEnd, FColor::Blue, false, 0.0f, 0.0f, 10.0f);
 
+	float t = FVector::DotProduct(p1 - lineStart, normal) / FVector::DotProduct(lineForward, normal);
 
+	if (t > 0)
+	{
+		FVector p = lineStart + t * lineForward;
+
+		float r1 = FVector::DotProduct(FVector::CrossProduct(p1 - p, p2 - p), normal);
+		float r2 = FVector::DotProduct(FVector::CrossProduct(p2 - p, p3 - p), normal);
+		float r3 = FVector::DotProduct(FVector::CrossProduct(p3 - p, p1 - p), normal);
+
+		if (r1 > 0 && r2 > 0 && r3 > 0)
+		{
+			pDynamicMaterialInst->SetVectorParameterValue(TEXT("Color"), FVector4(1, 0, 0, 0));
+		}
+		else
+		{
+			pDynamicMaterialInst->SetVectorParameterValue(TEXT("Color"), FVector4(1, 1, 1, 0));
+		}
+	}
+	else
+	{
+		pDynamicMaterialInst->SetVectorParameterValue(TEXT("Color"), FVector4(1, 1, 1, 0));
+	}
+
+	FRotator rotationDelta(rotationSpeed * DeltaTime, 0, 0);
+	AddActorLocalRotation(rotationDelta, false, nullptr, ETeleportType::None);
 }
 

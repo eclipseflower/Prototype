@@ -13,8 +13,9 @@ public class Rigid_Bunny : MonoBehaviour
 
 	float linear_decay	= 0.999f;				// for velocity decay
 	float angular_decay	= 0.98f;				
-	float restitution 	= 0.5f;					// for collision
+	float restitution 	= 0.5f;                 // for collision
 
+	Vector3 gravity;
 
 	// Use this for initialization
 	void Start () 
@@ -42,6 +43,8 @@ public class Rigid_Bunny : MonoBehaviour
 			I_ref[2, 2]-=m*vertices[i][2]*vertices[i][2];
 		}
 		I_ref [3, 3] = 1;
+
+		gravity = new Vector3(0, mass * -9.8f, 0);
 	}
 	
 	Matrix4x4 Get_Cross_Matrix(Vector3 a)
@@ -67,6 +70,12 @@ public class Rigid_Bunny : MonoBehaviour
 	{
 	}
 
+	void Update_Velocity(out Vector3 v1, Vector3 v0, Vector3 f, float delta)
+	{
+		Vector3 a = f / mass * delta;
+		v1 = 1 * (v0 + a * delta);
+	}
+
     void Update_Position(out Vector3 x1, Vector3 x0, Vector3 v01, float delta)
     {
         x1 = x0 + v01 * delta;
@@ -74,7 +83,8 @@ public class Rigid_Bunny : MonoBehaviour
 
     void Update_Rotation(out Quaternion q1, Quaternion q0, Vector3 w01, float delta)
     {
-
+		Quaternion tmp = new Quaternion(w01.x * delta * 0.5f, w01.y * delta * 0.5f, w01.z * delta * 0.5f, 0) * q0;
+		q1 = new Quaternion(q0.x + tmp.x, q0.y + tmp.y, q0.z + tmp.z, q0.w + tmp.w);
     }
 
 	// Update is called once per frame
@@ -94,7 +104,10 @@ public class Rigid_Bunny : MonoBehaviour
 		}
 
 		// Part I: Update velocities
-
+		if (launched)
+		{
+			Update_Velocity(out v, v, gravity, dt);
+		}
 
 		// Part II: Collision Impulse
 		Collision_Impulse(new Vector3(0, 0.01f, 0), new Vector3(0, 1, 0));
@@ -109,6 +122,10 @@ public class Rigid_Bunny : MonoBehaviour
         }
 		//Update angular status
 		Quaternion q = transform.rotation;
+		if(launched)
+		{
+			Update_Rotation(out q, q, w, dt);
+		}
 
 		// Part IV: Assign to the object
 		transform.position = x;

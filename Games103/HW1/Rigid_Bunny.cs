@@ -68,13 +68,73 @@ public class Rigid_Bunny : MonoBehaviour
 	//a plane <P, N>
 	void Collision_Impulse(Vector3 P, Vector3 N)
 	{
+		Mesh mesh = GetComponent<MeshFilter>().mesh;
+		Vector3[] vertices = mesh.vertices;
+
+        Vector3 avg = Vector3.zero;
+        int num = 0;
+        for(int i = 0; i < vertices.Length; i++)
+        {
+            Vector3 vert = vertices[i];
+            if(Vector3.Dot(vert - P, N) < 0)
+            {
+                avg += vert;
+                num++;
+            }
+        }
+
+        if(num == 0)
+        {
+            return;
+        }
+
+        avg /= num;
+
+        Vector3 rri = avg - transform.position;
+        Vector3 vi = v + Vector3.Cross(w, rri);
+        float dot = Vector3.Dot(vi, N);
+        if(dot >= 0)
+        {
+            return;
+        }
+
+        Vector3 vni = dot * N;
+        Vector3 vti = vi - vni;
+        float a = Mathf.Max(1 - restitution * (1 + restitution) * Vector3.Magnitude(vni) / Vector3.Magnitude(vti), 0);
+        vni = -restitution * vni;
+        vti = a * vti;
+        Vector3 vinew = vni + vti;
+
+        Matrix4x4 inv = Matrix4x4.Inverse(I_ref);
+        Matrix4x4 k1 = Matrix4x4.Scale(new Vector3(1 / mass, 1 / mass, 1 / mass));
+        Matrix4x4 k2 = Get_Cross_Matrix(rri) * inv * Get_Cross_Matrix(rri);
+        Matrix4x4 k = new Matrix4x4();
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                k[i, j] = k1[i, j] - k2[i, j];
+            }
+        }
+
+        Vector3 J = Matrix4x4.Inverse(k) * (vinew - vi);
+        v = v + J / mass;
+        Vector3 tmp1 = Vector3.Cross(rri, J);
+        Vector4 tmp2 = new Vector4(tmp1.x, tmp1.y, tmp1.z, 0);
+        Vector3 tmp3 = inv * tmp2;
+        w = w + new Vector3(tmp3.x, tmp3.y, tmp3.z);
 	}
 
 	void Update_Velocity(out Vector3 v1, Vector3 v0, Vector3 f, float delta)
 	{
 		Vector3 a = f / mass * delta;
-		v1 = 1 * (v0 + a * delta);
+		v1 = linear_decay * (v0 + a * delta);
 	}
+
+    void Update_Angular_Velocity(out Vector3 w1, Vector3 w0)
+    {
+        w1 = angular_decay * w0;
+    }
 
     void Update_Position(out Vector3 x1, Vector3 x0, Vector3 v01, float delta)
     {
@@ -99,7 +159,8 @@ public class Rigid_Bunny : MonoBehaviour
 		}
 		if(Input.GetKey("l"))
 		{
-			v = new Vector3 (5, 2, 0);
+			//v = new Vector3 (5, 2, 0);
+			//w = new Vector3 (5, 2, 0);
 			launched=true;
 		}
 
@@ -107,6 +168,7 @@ public class Rigid_Bunny : MonoBehaviour
 		if (launched)
 		{
 			Update_Velocity(out v, v, gravity, dt);
+            Update_Angular_Velocity(out w, w);
 		}
 
 		// Part II: Collision Impulse
@@ -115,7 +177,7 @@ public class Rigid_Bunny : MonoBehaviour
 
 		// Part III: Update position & orientation
 		//Update linear status
-		Vector3 x    = transform.position;
+		Vector3 x = transform.position;
         if (launched)
         {
             Update_Position(out x, x, v, dt);

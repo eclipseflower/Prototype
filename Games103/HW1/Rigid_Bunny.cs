@@ -104,10 +104,13 @@ public class Rigid_Bunny : MonoBehaviour
         vni = -restitution * vni;
         vti = a * vti;
         Vector3 vinew = vni + vti;
-        Debug.Log("vi new " + vinew + " " + vni + " " + vti);
 
         Matrix4x4 inv = Matrix4x4.Inverse(I_ref);
-        Matrix4x4 k1 = Matrix4x4.Scale(new Vector3(1 / mass, 1 / mass, 1 / mass));
+        Matrix4x4 k1 = Matrix4x4.identity;
+		for(int i = 0; i < 4; i++)
+		{
+			k1[i, i] = 1 / mass;
+		}
         Matrix4x4 k2 = Get_Cross_Matrix(rri) * inv * Get_Cross_Matrix(rri);
         Matrix4x4 k = new Matrix4x4();
         for(int i = 0; i < 4; i++)
@@ -124,7 +127,6 @@ public class Rigid_Bunny : MonoBehaviour
         Vector4 tmp2 = new Vector4(tmp1.x, tmp1.y, tmp1.z, 0);
         Vector3 tmp3 = inv * tmp2;
         w = w + new Vector3(tmp3.x, tmp3.y, tmp3.z);
-        Debug.Log("new V " + v + " " + J + " " + mass);
 	}
 
 	void Update_Velocity(out Vector3 v1, Vector3 v0, Vector3 f, float delta)

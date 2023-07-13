@@ -75,7 +75,7 @@ public class Rigid_Bunny : MonoBehaviour
         int num = 0;
         for(int i = 0; i < vertices.Length; i++)
         {
-            Vector3 vert = vertices[i];
+            Vector3 vert = transform.TransformPoint(vertices[i]);
             if(Vector3.Dot(vert - P, N) < 0)
             {
                 avg += vert;
@@ -104,6 +104,7 @@ public class Rigid_Bunny : MonoBehaviour
         vni = -restitution * vni;
         vti = a * vti;
         Vector3 vinew = vni + vti;
+        Debug.Log("vi new " + vinew + " " + vni + " " + vti);
 
         Matrix4x4 inv = Matrix4x4.Inverse(I_ref);
         Matrix4x4 k1 = Matrix4x4.Scale(new Vector3(1 / mass, 1 / mass, 1 / mass));
@@ -123,6 +124,7 @@ public class Rigid_Bunny : MonoBehaviour
         Vector4 tmp2 = new Vector4(tmp1.x, tmp1.y, tmp1.z, 0);
         Vector3 tmp3 = inv * tmp2;
         w = w + new Vector3(tmp3.x, tmp3.y, tmp3.z);
+        Debug.Log("new V " + v + " " + J + " " + mass);
 	}
 
 	void Update_Velocity(out Vector3 v1, Vector3 v0, Vector3 f, float delta)
@@ -173,7 +175,7 @@ public class Rigid_Bunny : MonoBehaviour
 
 		// Part II: Collision Impulse
 		Collision_Impulse(new Vector3(0, 0.01f, 0), new Vector3(0, 1, 0));
-		Collision_Impulse(new Vector3(2, 0, 0), new Vector3(-1, 0, 0));
+		//Collision_Impulse(new Vector3(2, 0, 0), new Vector3(-1, 0, 0));
 
 		// Part III: Update position & orientation
 		//Update linear status

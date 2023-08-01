@@ -8,10 +8,13 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
 	Vector3[] X;
 	Vector3[] Q;
 	Vector3[] V;
+	Vector3[] Y;
 	Matrix4x4 QQt = Matrix4x4.zero;
 
 	Vector3 gravity = new Vector3(0, -9.8f, 0);
-	public float restitution 	= 0.5f;                 // for collision
+	public float u_t 	= 0.5f;                 // for collision
+	public float u_n	= 5.0f;
+	float linear_decay	= 0.999f;				// for velocity decay
 
     // Start is called before the first frame update
     void Start()
@@ -20,6 +23,7 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
         V = new Vector3[mesh.vertices.Length];
         X = mesh.vertices;
         Q = mesh.vertices;
+		Y = mesh.vertices;
 
         //Centerizing Q.
         Vector3 c=Vector3.zero;
@@ -148,7 +152,7 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
 		{
 			Vector3 x=(Vector3)(R*Q[i])+c;
 
-			V[i]+=(x-X[i])*inv_dt;
+			V[i]=(x-X[i])*inv_dt;
 			X[i]=x;
 		}
 		Mesh mesh = GetComponent<MeshFilter>().mesh;
@@ -157,7 +161,7 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
 
 	void Collision_Impulse(int i, Vector3 P, Vector3 N)
 	{
-		Vector3 vert = transform.TransformPoint(X[i]);
+		Vector3 vert = X[i];
 		if(Vector3.Dot(vert - P, N) >= 0)
 		{
 			return;
@@ -172,15 +176,15 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
 
         Vector3 vni = dot * N;
         Vector3 vti = vi - vni;
-        float a = Mathf.Max(1 - restitution * (1 + restitution) * Vector3.Magnitude(vni) / Vector3.Magnitude(vti), 0);
-        vni = -restitution * vni;
+        float a = Mathf.Max(1 - u_t * (1 + u_n) * Vector3.Magnitude(vni) / Vector3.Magnitude(vti), 0);
+        vni = -u_n * vni;
         vti = a * vti;
         V[i] = vni + vti;
 	}
 
 	void Collision(float inv_dt)
 	{
-		for(int i = 0; i < X.Length; i++)
+		for(int i = 0; i < Y.Length; i++)
 		{
 			Collision_Impulse(i, new Vector3(0, 0.01f, 0), new Vector3(0, 1, 0));
 			Collision_Impulse(i, new Vector3(2, 0, 0), new Vector3(-1, 0, 0));
@@ -193,53 +197,57 @@ public class Rigid_Bunny_by_Shape_Matching : MonoBehaviour
 		//Game Control
 		if(Input.GetKey("r"))
 		{
-			transform.position = Vector3.zero;
-			for(int i=0; i<Q.Length; i++)
-				X[i] = Q[i];
+			Update_Mesh(new Vector3(0, 0.6f, 0), Matrix4x4.Rotate(transform.rotation), 0);
 			launched=false;
 		}
 		if(Input.GetKey("l"))
 		{
 			for(int i=0; i<X.Length; i++)
-				V[i][0]=4.0f;
+				V[i] = new Vector3(5.0f, 2.0f, 0.0f);
 			launched=true;
+		}
+
+		if(!launched)
+		{
+			return;
 		}
 
   		float dt = 0.015f;
 
   		//Step 1: run a simple particle system.
-		if(launched)
+		for(int i=0; i<V.Length; i++)
 		{
-			for(int i=0; i<V.Length; i++)
-			{
-				V[i] += gravity * dt;
-				X[i] += V[i] * dt;
-			}
+			V[i] = linear_decay * (V[i] + gravity * dt);
 		}
 
         //Step 2: Perform simple particle collision.
 		Collision(1/dt);
 
+		for(int i=0; i<V.Length; i++)
+		{
+			Y[i] = X[i] + V[i] * dt;
+		}
+
 		// Step 3: Use shape matching to get new translation c and
 		// new rotation R. Update the mesh by c and R.
         Vector3 c=Vector3.zero;
-        for(int i=0; i<X.Length; i++)
-        	c+=X[i];
-        c/=X.Length;
+        for(int i=0; i<Y.Length; i++)
+        	c+=Y[i];
+        c/=Y.Length;
         //Shape Matching (translation)
 		Matrix4x4 A = Matrix4x4.zero;
-		for(int i=0; i<X.Length; i++)
+		for(int i=0; i<Y.Length; i++)
 		{
-			Vector3 Y = X[i] - c;
-			A[0, 0]+=Y[0]*Q[i][0];
-			A[0, 1]+=Y[0]*Q[i][1];
-			A[0, 2]+=Y[0]*Q[i][2];
-			A[1, 0]+=Y[1]*Q[i][0];
-			A[1, 1]+=Y[1]*Q[i][1];
-			A[1, 2]+=Y[1]*Q[i][2];
-			A[2, 0]+=Y[2]*Q[i][0];
-			A[2, 1]+=Y[2]*Q[i][1];
-			A[2, 2]+=Y[2]*Q[i][2];
+			Vector3 yic = Y[i] - c;
+			A[0, 0]+=yic[0]*Q[i][0];
+			A[0, 1]+=yic[0]*Q[i][1];
+			A[0, 2]+=yic[0]*Q[i][2];
+			A[1, 0]+=yic[1]*Q[i][0];
+			A[1, 1]+=yic[1]*Q[i][1];
+			A[1, 2]+=yic[1]*Q[i][2];
+			A[2, 0]+=yic[2]*Q[i][0];
+			A[2, 1]+=yic[2]*Q[i][1];
+			A[2, 2]+=yic[2]*Q[i][2];
 		}
 		A[3, 3]=1;
 		A *= Matrix4x4.Inverse(QQt);

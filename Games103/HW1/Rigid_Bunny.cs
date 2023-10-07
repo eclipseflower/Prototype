@@ -163,7 +163,7 @@ public class Rigid_Bunny : MonoBehaviour
 		}
 		if(Input.GetKey("l"))
 		{
-			v = new Vector3 (5, 0, 0);
+			v = new Vector3 (5, 2, 0);
 			w = new Vector3 (5, 2, 0);
 			launched=true;
 		}

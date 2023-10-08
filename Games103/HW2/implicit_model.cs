@@ -13,6 +13,8 @@ public class implicit_model : MonoBehaviour
 	float[] 	L;
 	Vector3[] 	V;
 
+    Vector3 gravity = new Vector3(0, -9.8f, 0);
+
     // Start is called before the first frame update
     void Start()
     {
@@ -140,16 +142,24 @@ public class implicit_model : MonoBehaviour
 		mesh.vertices = X;
 	}
 
-	void Get_Gradient(Vector3[] X, Vector3[] X_hat, float t, Vector3[] G)
-	{
-		//Momentum and Gravity.
-		for(int i = 0; i < G.Length; i++)
-		{
-			G[i] = mass * (X[i] - X_hat[i]) / (t * t);
-		}
-		
-		//Spring Force.
-		
+    void Get_Gradient(Vector3[] X, Vector3[] X_hat, float t, Vector3[] G)
+    {
+        //Momentum and Gravity.
+        for (int i = 0; i < G.Length; i++)
+        {
+            G[i] = mass * (X[i] - X_hat[i]) / (t * t) - mass * gravity;
+        }
+
+        //Spring Force.
+        for (int e = 0; e < L.Length; e++)
+        {
+            int i = e * 2 + 0;
+            int j = e * 2 + 1;
+            float x = Vector3.Distance(X[i], X[j]);
+            Vector3 f = spring_k * (1 - L[e] / x) * (X[i] - X[j]);
+            G[i] += f;
+            G[j] -= f;
+        }
 	}
 
     // Update is called once per frame
@@ -177,7 +187,10 @@ public class implicit_model : MonoBehaviour
 			Get_Gradient(X, X_hat, t, G);
 			
 			//Update X by gradient.
-			
+            for(int i = 0; i < X.Length; i++)
+            {
+                X[i] -= 1 / (mass / (t * t) + 4 * k) * G[i];
+            }
 		}
 
 		//Finishing.

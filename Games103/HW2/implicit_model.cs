@@ -153,13 +153,19 @@ public class implicit_model : MonoBehaviour
         //Spring Force.
         for (int e = 0; e < L.Length; e++)
         {
-            int i = e * 2 + 0;
-            int j = e * 2 + 1;
+            int i = E[e * 2 + 0];
+            int j = E[e * 2 + 1];
             float x = Vector3.Distance(X[i], X[j]);
             Vector3 f = spring_k * (1 - L[e] / x) * (X[i] - X[j]);
             G[i] += f;
             G[j] -= f;
         }
+	}
+
+	bool Skip_Update(int index)
+	{
+		//return index == 0 || index == 20;
+		return false;
 	}
 
     // Update is called once per frame
@@ -174,12 +180,18 @@ public class implicit_model : MonoBehaviour
 		//Initial Setup.
 		for (int i = 0; i < V.Length; i++)
 		{
-			V[i] *= damping;
+			if (!Skip_Update(i))
+			{
+				V[i] *= damping;
+			}
 		}
 		for(int i = 0; i < X.Length; i++)
 		{
-			X_hat[i] = X[i] + V[i] * t;
-			X[i] = X_hat[i];
+			if (!Skip_Update(i))
+			{
+				X_hat[i] = X[i] + V[i] * t;
+				X[i] = X_hat[i];
+			}
 		}
 
 		for(int k=0; k<32; k++)
@@ -189,8 +201,19 @@ public class implicit_model : MonoBehaviour
 			//Update X by gradient.
             for(int i = 0; i < X.Length; i++)
             {
-                X[i] -= 1 / (mass / (t * t) + 4 * k) * G[i];
+				if (!Skip_Update(i))
+				{
+					X[i] -= 1 / (mass / (t * t) + 4 * k) * G[i];
+				}
             }
+		}
+
+		for(int i = 0; i < X.Length; i++)
+		{
+			if (!Skip_Update(i))
+			{
+				V[i] += (X[i] - X_hat[i]) / t;
+			}
 		}
 
 		//Finishing.

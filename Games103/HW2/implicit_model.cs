@@ -14,10 +14,13 @@ public class implicit_model : MonoBehaviour
 	Vector3[] 	V;
 
     Vector3 gravity = new Vector3(0, -9.8f, 0);
+	float r = 2.7f;
+	GameObject sphere = null;
 
     // Start is called before the first frame update
     void Start()
     {
+		sphere = GameObject.Find("Sphere");
 		Mesh mesh = GetComponent<MeshFilter> ().mesh;
 
 		//Resize the mesh.
@@ -136,8 +139,21 @@ public class implicit_model : MonoBehaviour
 	{
 		Mesh mesh = GetComponent<MeshFilter> ().mesh;
 		Vector3[] X = mesh.vertices;
-		
+
 		//Handle colllision.
+		Vector3 c = sphere.transform.position;
+		for(int i = 0; i < X.Length; i++)
+		{
+			if(!Skip_Update(i))
+			{
+                float d = Vector3.Distance(X[i], c);
+                if (d < r)
+				{
+					V[i] = V[i] + 1 / t * (c + r * (X[i] - c) / d - X[i]);
+					X[i] = c + r * (X[i] - c) / d;
+                }
+            }
+		}
 
 		mesh.vertices = X;
 	}
@@ -228,14 +244,9 @@ public class implicit_model : MonoBehaviour
             {
 				if (!Skip_Update(i))
 				{
-					//Vector3 old = X[i];
-					//X[i] = omega *(X[i] - 1 / (mass / (t * t) + 4 * spring_k) * G[i]) + (1 - omega) * last_X[i];
-					//last_X[i] = old;
-
-					Vector3 old = X[i] - X_hat[i];
-					Vector3 delta = -omega / (mass / (t * t) + 4 * spring_k) * G[i] + (1 - omega) * last_X[i];
+					Vector3 old = X[i];
+					X[i] = omega * (X[i] - 1 / (mass / (t * t) + 4 * spring_k) * G[i]) + (1 - omega) * last_X[i];
 					last_X[i] = old;
-					X[i] += delta;
 				}
             }
 		}

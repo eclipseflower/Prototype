@@ -147,7 +147,10 @@ public class implicit_model : MonoBehaviour
         //Momentum and Gravity.
         for (int i = 0; i < G.Length; i++)
         {
-            G[i] = mass * (X[i] - X_hat[i]) / (t * t) - mass * gravity;
+			if (!Skip_Update(i))
+			{
+				G[i] = mass * (X[i] - X_hat[i]) / (t * t) - mass * gravity;
+			}
         }
 
         //Spring Force.
@@ -157,15 +160,23 @@ public class implicit_model : MonoBehaviour
             int j = E[e * 2 + 1];
             float x = Vector3.Distance(X[i], X[j]);
             Vector3 f = spring_k * (1 - L[e] / x) * (X[i] - X[j]);
-            G[i] += f;
-            G[j] -= f;
+
+			if (!Skip_Update(i))
+			{
+				G[i] += f;
+			}
+
+			if (!Skip_Update(j))
+			{
+				G[j] -= f;
+			}
         }
 	}
 
 	bool Skip_Update(int index)
 	{
-		//return index == 0 || index == 20;
-		return false;
+		return index == 0 || index == 20;
+		//return false;
 	}
 
     // Update is called once per frame
@@ -194,16 +205,37 @@ public class implicit_model : MonoBehaviour
 			}
 		}
 
+        float omega = 1.0f;
 		for(int k=0; k<32; k++)
 		{
 			Get_Gradient(X, X_hat, t, G);
+
+			if(k == 0)
+			{
+				omega = 1.0f;
+			}
+			else if(k == 1)
+			{
+                omega = 2.0f / (2.0f - rho * rho);
+            }
+            else
+			{
+                omega = 4.0f / (4.0f - rho * rho * omega);
+            }
 			
 			//Update X by gradient.
             for(int i = 0; i < X.Length; i++)
             {
 				if (!Skip_Update(i))
 				{
-					X[i] -= 1 / (mass / (t * t) + 4 * k) * G[i];
+					//Vector3 old = X[i];
+					//X[i] = omega *(X[i] - 1 / (mass / (t * t) + 4 * spring_k) * G[i]) + (1 - omega) * last_X[i];
+					//last_X[i] = old;
+
+					Vector3 old = X[i] - X_hat[i];
+					Vector3 delta = -omega / (mass / (t * t) + 4 * spring_k) * G[i] + (1 - omega) * last_X[i];
+					last_X[i] = old;
+					X[i] += delta;
 				}
             }
 		}

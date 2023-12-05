@@ -156,10 +156,46 @@ public class FVM : MonoBehaviour
     	Matrix4x4 ret = Matrix4x4.zero;
         for(int i = 0; i < 4; i++)
         {
-            for(int j = 0; j < 4; j++)
+            for(int j =0; j < 4; j++)
             {
                 ret[i, j] = a[i, j] + b[i, j];
             }
+        }
+        return ret;
+    }
+
+    Matrix4x4 Matrix_Sub(Matrix4x4 a, Matrix4x4 b)
+    {
+    	Matrix4x4 ret = Matrix4x4.zero;
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                ret[i, j] = a[i, j] - b[i, j];
+            }
+        }
+        return ret;
+    }
+
+    Matrix4x4 Matrix_Mul(float s, Matrix4x4 m)
+    {
+        Matrix4x4 ret = Matrix4x4.zero;
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j =0; j < 4; j++)
+            {
+                ret[i, j] = s * m[i, j];
+            }
+        }
+        return ret;
+    }
+
+    float Matrix_Trace(Matrix4x4 m)
+    {
+        float ret = 0.0f;
+        for(int i = 0; i < 4; i++)
+        {
+            ret += m[i, i];
         }
         return ret;
     }
@@ -187,20 +223,22 @@ public class FVM : MonoBehaviour
             Matrix4x4 F = m * inv_Dm[tet];
 
             //TODO: Green Strain
-            Matrix4x4 G = F.transpose * F;
-            for(int i = 0; i < 4; i++)
-            {
-                for(int j = 0; j < 4; j++)
-                {
+            Matrix4x4 G = Matrix_Mul(0.5f, Matrix_Sub(F.transpose * F, Matrix4x4.identity));
 
-                }
-            }
-            Matrix4x4 G = 0.5f * Matrix_Add(F.transpose * F, -1f * Matrix4x4.identity);
+            //TODO: Second PK Stress
+            Matrix4x4 S = Matrix_Add(Matrix_Mul(2.0f * stiffness_1, G),
+                Matrix_Mul(stiffness_0 * Matrix_Trace(G), Matrix4x4.identity));
 
-    		//TODO: Second PK Stress
+            //TODO: Elastic Force
+            Matrix4x4 fm = Matrix_Mul(-1.0f / (6.0f * inv_Dm[tet].determinant), F * S * inv_Dm[tet].transpose);
+            Vector3 f1 = fm.GetColumn(0);
+            Vector3 f2 = fm.GetColumn(1);
+            Vector3 f3 = fm.GetColumn(2);
 
-    		//TODO: Elastic Force
-			
+            Force[Tet[tet * 4 + 0]] -= f1 + f2 + f3;
+            Force[Tet[tet * 4 + 1]] += f1;
+            Force[Tet[tet * 4 + 2]] += f2;
+            Force[Tet[tet * 4 + 3]] += f3;
     	}
 
     	for(int i=0; i<number; i++)

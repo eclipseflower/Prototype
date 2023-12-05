@@ -28,6 +28,8 @@ public class FVM : MonoBehaviour
 
 	SVD svd = new SVD();
 
+    public bool bonus = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -141,12 +143,12 @@ public class FVM : MonoBehaviour
     {
     	Matrix4x4 ret=Matrix4x4.zero;
     	//TODO: Need to build edge matrix here.
-        Vector3 e1 = X[Tet[tet * 4 + 1]] - X[Tet[tet * 4 + 0]];
-        Vector3 e2 = X[Tet[tet * 4 + 2]] - X[Tet[tet * 4 + 0]];
-        Vector3 e3 = X[Tet[tet * 4 + 3]] - X[Tet[tet * 4 + 0]];
-        ret.SetColumn(0, new Vector4(e1.x, e2.x, e3.x, 0));
-        ret.SetColumn(1, new Vector4(e1.y, e2.y, e3.y, 0));
-        ret.SetColumn(2, new Vector4(e1.z, e2.z, e3.z, 0));
+        Vector4 e1 = X[Tet[tet * 4 + 1]] - X[Tet[tet * 4 + 0]];
+        Vector4 e2 = X[Tet[tet * 4 + 2]] - X[Tet[tet * 4 + 0]];
+        Vector4 e3 = X[Tet[tet * 4 + 3]] - X[Tet[tet * 4 + 0]];
+        ret.SetColumn(0, e1);
+        ret.SetColumn(1, e2);
+        ret.SetColumn(2, e3);
         ret.SetColumn(3, new Vector4(0, 0, 0, 1));
         return ret;
     }
@@ -200,6 +202,32 @@ public class FVM : MonoBehaviour
         return ret;
     }
 
+    void Laplacian_Smoothing(float blend)
+    {
+        for (int i = 0; i < number; i++)
+        {
+            V_sum[i] = Vector3.zero;
+            V_num[i] = 0;
+        }
+
+    	for(int tet=0; tet<tet_number; tet++)
+        {
+            Vector3 sum = V[Tet[tet * 4 + 0]] + V[Tet[tet * 4 + 1]] + V[Tet[tet * 4 + 2]] + V[Tet[tet * 4 + 3]];
+            V_sum[Tet[tet * 4 + 0]] += sum;
+            V_sum[Tet[tet * 4 + 1]] += sum;
+            V_sum[Tet[tet * 4 + 2]] += sum;
+            V_sum[Tet[tet * 4 + 3]] += sum;
+            V_num[Tet[tet * 4 + 0]] += 4;
+            V_num[Tet[tet * 4 + 1]] += 4;
+            V_num[Tet[tet * 4 + 2]] += 4;
+            V_num[Tet[tet * 4 + 3]] += 4;
+        }
+
+        for(int i = 0; i < number; i++)
+        {
+            V[i] = (V[i] + blend * V_sum[i] / V_num[i]) / (1 + blend);
+        }
+    }
 
     void _Update()
     {
@@ -213,7 +241,7 @@ public class FVM : MonoBehaviour
     	for(int i=0 ;i<number; i++)
     	{
             //TODO: Add gravity to Force.
-            Force[i].y -= 9.8f * mass;
+            Force[i] = new Vector3(0, -9.8f * mass, 0);
     	}
 
     	for(int tet=0; tet<tet_number; tet++)
@@ -222,18 +250,66 @@ public class FVM : MonoBehaviour
             Matrix4x4 m = Build_Edge_Matrix(tet);
             Matrix4x4 F = m * inv_Dm[tet];
 
-            //TODO: Green Strain
-            Matrix4x4 G = Matrix_Mul(0.5f, Matrix_Sub(F.transpose * F, Matrix4x4.identity));
+            Vector3 f1 = Vector3.zero;
+            Vector3 f2 = Vector3.zero;
+            Vector3 f3 = Vector3.zero;
 
-            //TODO: Second PK Stress
-            Matrix4x4 S = Matrix_Add(Matrix_Mul(2.0f * stiffness_1, G),
-                Matrix_Mul(stiffness_0 * Matrix_Trace(G), Matrix4x4.identity));
+            if(bonus)
+            {
+                Matrix4x4 U = Matrix4x4.zero;
+                Matrix4x4 S = Matrix4x4.zero;
+                Matrix4x4 V = Matrix4x4.zero;
 
-            //TODO: Elastic Force
-            Matrix4x4 fm = Matrix_Mul(-1.0f / (6.0f * inv_Dm[tet].determinant), F * S * inv_Dm[tet].transpose);
-            Vector3 f1 = fm.GetColumn(0);
-            Vector3 f2 = fm.GetColumn(1);
-            Vector3 f3 = fm.GetColumn(2);
+                svd.svd(F, ref U, ref S, ref V);
+
+                float lambda0 = S[0, 0];
+                float lambda1 = S[1, 1];
+                float lambda2 = S[2, 2];
+
+                float Ic = lambda0 * lambda0 + lambda1 * lambda1 + lambda2 * lambda2;
+
+                float dWdIc = 0.25f * stiffness_0 * (Ic - 3f) - 0.5f * stiffness_1;
+                float dWdIIc = 0.25f * stiffness_1;
+                float dIcdlambda0 = 2f * lambda0;
+                float dIcdlambda1 = 2f * lambda1;
+                float dIcdlambda2 = 2f * lambda2;
+                float dIIcdlambda0 = 4f * lambda0 * lambda0 * lambda0;
+                float dIIcdlambda1 = 4f * lambda1 * lambda1 * lambda1;
+                float dIIcdlambda2 = 4f * lambda2 * lambda2 * lambda2;
+                float dWd0 = dWdIc * dIcdlambda0 + dWdIIc * dIIcdlambda0;
+                float dWd1 = dWdIc * dIcdlambda1 + dWdIIc * dIIcdlambda1;
+                float dWd2 = dWdIc * dIcdlambda2 + dWdIIc * dIIcdlambda2;
+
+                Matrix4x4 diag = Matrix4x4.zero;
+                diag[0, 0] = dWd0;
+                diag[1, 1] = dWd1;
+                diag[2, 2] = dWd2;
+                diag[3, 3] = 1;
+                Matrix4x4 P = U * diag * V.transpose;
+
+                Matrix4x4 fm = Matrix_Mul(-1.0f / (6.0f * inv_Dm[tet].determinant),
+                    P * inv_Dm[tet].transpose);
+                f1 = fm.GetColumn(0);
+                f2 = fm.GetColumn(1);
+                f3 = fm.GetColumn(2);
+
+            }
+            else
+            {
+                //TODO: Green Strain
+                Matrix4x4 G = Matrix_Mul(0.5f, Matrix_Sub(F.transpose * F, Matrix4x4.identity));
+
+                //TODO: Second PK Stress
+                Matrix4x4 S = Matrix_Add(Matrix_Mul(2.0f * stiffness_1, G),
+                    Matrix_Mul(stiffness_0 * Matrix_Trace(G), Matrix4x4.identity));
+
+                //TODO: Elastic Force
+                Matrix4x4 fm = Matrix_Mul(-1.0f / (6.0f * inv_Dm[tet].determinant),
+                    F * S * inv_Dm[tet].transpose);
+                f1 = fm.GetColumn(0);
+                f2 = fm.GetColumn(1);
+                f3 = fm.GetColumn(2);
+            }
 
             Force[Tet[tet * 4 + 0]] -= f1 + f2 + f3;
             Force[Tet[tet * 4 + 1]] += f1;
@@ -241,16 +317,19 @@ public class FVM : MonoBehaviour
             Force[Tet[tet * 4 + 3]] += f3;
     	}
 
+        Laplacian_Smoothing(0.1f);
+
     	for(int i=0; i<number; i++)
     	{
     		//TODO: Update X and V here.
-            X[i] += V[i]*dt;
             V[i] += Force[i] * dt / mass;
+            V[i] *= damp;
+            X[i] += V[i]*dt;
 
             //TODO: (Particle) collision with floor.
             if (X[i].y < -3f)
             {
-                V[i] = V[i] + 1 / dt * (new Vector3(X[i].x, -3f, X[i].z)- X[i]);
+                V[i].y += (-3f - X[i].y) / dt;
                 X[i].y = -3f;
             }
     	}

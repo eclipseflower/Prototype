@@ -160,6 +160,17 @@ public class wave_motion : MonoBehaviour
 
 		//Step 2: Block->Water coupling
 		//TODO: for block 1, calculate low_h.
+		var go = GameObject.Find("Plane");
+		var renderer = go.GetComponent<Renderer>();
+		var bounds = renderer.bounds;
+		for(int i = 0; i < size; i++)
+		{
+			for(int j = 0; j < size; j++)
+			{
+                bounds.IntersectRay(new Ray(new Vector3(i * 0.1f - size * 0.05f, 0, j * 0.1f - size * 0.05f), 
+					Vector3.up));
+			}
+		}
 		//TODO: then set up b and cg_mask for conjugate gradient.
 		//TODO: Solve the Poisson equation to obtain vh (virtual height).
 

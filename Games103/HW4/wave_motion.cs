@@ -142,6 +142,55 @@ public class wave_motion : MonoBehaviour
 
 	}
 
+	void Block_Water_Coupling(string name, float [,] new_h)
+	{
+        //TODO: for block 1, calculate low_h.
+		var go = GameObject.Find(name);
+		var renderer = go.GetComponent<Renderer>();
+		var bounds = renderer.bounds;
+		var pos = go.transform.position;
+		int grid_x = (int)(pos.x * 10 + size * 0.5f);
+		int grid_z = (int)(pos.z * 10 + size * 0.5f);
+		int li = grid_x - 6;
+		int ui = grid_x + 6;
+		int lj = grid_z - 6;
+		int uj = grid_z + 6;
+
+		for(int i = li; i <= ui; i++)
+		{
+			for(int j = lj; j <= uj; j++)
+			{
+				if (i >= 0 && j >= 0 && i < size && j < size)
+				{
+					float dist = 99999;
+					bounds.IntersectRay(new Ray(new Vector3(i * 0.1f - size * 0.05f, 0, j * 0.1f - size * 0.05f),
+						Vector3.up), out dist);
+					low_h[i, j] = dist;
+				}
+			}
+		}
+		//TODO: then set up b and cg_mask for conjugate gradient.
+		for(int i = 0; i < size; i++)
+		{
+			for(int j = 0; j < size; j++)
+			{
+				if (low_h[i, j] <= new_h[i, j])
+				{
+					b[i, j] = (new_h[i, j] - low_h[i, j]) / rate;
+					cg_mask[i, j] = true;
+				}
+				else
+				{
+					b[i, j] = 0;
+					cg_mask[i, j] = false;
+					vh[i, j] = 0;
+				}
+            }
+		}
+		//TODO: Solve the Poisson equation to obtain vh (virtual height).
+		Conjugate_Gradient(cg_mask, b, vh, li, ui, lj, uj);
+	}
+
 	void Shallow_Wave(float[,] old_h, float[,] h, float [,] new_h)
 	{		
 		//Step 1:
@@ -159,28 +208,32 @@ public class wave_motion : MonoBehaviour
         }
 
 		//Step 2: Block->Water coupling
-		//TODO: for block 1, calculate low_h.
-		var go = GameObject.Find("Plane");
-		var renderer = go.GetComponent<Renderer>();
-		var bounds = renderer.bounds;
+		Block_Water_Coupling("Cube", new_h);
+		Block_Water_Coupling("Block", new_h);
+
+		//TODO: Diminish vh.
 		for(int i = 0; i < size; i++)
 		{
 			for(int j = 0; j < size; j++)
 			{
-                bounds.IntersectRay(new Ray(new Vector3(i * 0.1f - size * 0.05f, 0, j * 0.1f - size * 0.05f), 
-					Vector3.up));
-			}
+                if (cg_mask[i, j])
+				{
+					vh[i, j] *= gamma;
+                }
+            }
 		}
-		//TODO: then set up b and cg_mask for conjugate gradient.
-		//TODO: Solve the Poisson equation to obtain vh (virtual height).
-
-		//TODO: for block 2, calculate low_h.
-		//TODO: then set up b and cg_mask for conjugate gradient.
-		//TODO: Solve the Poisson equation to obtain vh (virtual height).
-	
-		//TODO: Diminish vh.
 
 		//TODO: Update new_h by vh.
+		for(int i = 0; i < size; i++)
+		{
+            for(int j = 0; j < size; j++)
+			{
+				if(i > 0) new_h[i, j] += rate * (vh[i - 1, j] - vh[i, j]);
+				if(i < size - 1) new_h[i, j] += rate * (vh[i + 1, j] - vh[i, j]);
+				if(j > 0) new_h[i, j] += rate * (vh[i, j - 1] - vh[i, j]);
+				if(j < size - 1) new_h[i, j] += rate * (vh[i, j + 1] - vh[i, j]);
+            }
+        }
 
 		//Step 3
 		//TODO: old_h <- h; h <- new_h;
